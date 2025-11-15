@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+# Fresh DB
+rm -f queuectl.db
+
+# Enqueue jobs
+python queuectl.py enqueue '{"id":"job-ok","command":"echo OK"}'
+python queuectl.py enqueue '{"id":"job-bad","command":"nonexistent_cmd","max_retries":1}'
+
+# Start one worker (in background)
+python queuectl.py worker start --count 1 &
+WORKER_PID=$!
+
+# Let it run a bit
+sleep 10
+
+# Show status and DLQ
+python queuectl.py status
+python queuectl.py dlq list
+
+# Stop workers
+python queuectl.py worker stop
+wait $WORKER_PID
